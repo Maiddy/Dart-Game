@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dart It!</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #800020; /* Burgundy background */
+      margin: 0;
+      padding: 20px;
+      background-image: url('/mnt/data/A_2D_digital_image_for_"Dart_It!"_features_a_dartb.png');
+      background-size: cover;
+      background-repeat: repeat;
+    }
+    .dartboard-container {
+      display: inline-block;
+      padding: 20px;
+      background-color: black;
+      background-image: url('/mnt/data/3e401fdb-f5b7-4f57-a931-498e31b39acc.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+    canvas {
+      background: green; /* Green area for dartboard */
+      display: block;
+      margin: auto;
+    }
+    #score {
+      font-size: 24px;
+      margin-top: 10px;
+      color: white;
+    }
+    button {
+      margin-top: 15px;
+      font-size: 18px;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    #powerBarContainer {
+      width: 300px;
+      height: 20px;
+      background: #ddd;
+      margin: 20px auto;
+      position: relative;
+      border-radius: 10px; /* Make container cylindrical */
+      overflow: hidden;
+    }
+    #powerBar {
+      width: 20px;
+      height: 100%;
+      background: red;
+      position: absolute;
+      left: 0;
+      border-radius: 10px; /* Make bar cylindrical */
+    }
+    #verticalBarContainer {
+      width: 20px;
+      height: 200px;
+      background: #ddd;
+      margin: 20px auto;
+      position: relative;
+      border-radius: 10px; /* Make container cylindrical */
+      overflow: hidden;
+    }
+    #verticalBar {
+      width: 100%;
+      height: 20px;
+      background: blue;
+      position: absolute;
+      top: 0;
+      border-radius: 10px; /* Make bar cylindrical */
+    }
+  </style>
+</head>
+<body>
+  <h1 style="color:white;">Dart It!</h1>
+  <div class="dartboard-container">
+    <canvas id="dartboard" width="400" height="400"></canvas>
+  </div>
+  <div id="score">Score: 0</div>
+
+  <div id="powerBarContainer" onclick="stopHorizontalBar()">
+    <div id="powerBar"></div>
+  </div>
+  <div id="verticalBarContainer" onclick="stopVerticalBar()">
+    <div id="verticalBar"></div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('dartboard');
+    const ctx = canvas.getContext('2d');
+    const scoreDisplay = document.getElementById('score');
+    const powerBar = document.getElementById('powerBar');
+    const powerBarContainer = document.getElementById('powerBarContainer');
+    const verticalBar = document.getElementById('verticalBar');
+    const verticalBarContainer = document.getElementById('verticalBarContainer');
+
+    let score = 0;
+    let directionH = 1;
+    let directionV = 1;
+    let powerH = 0;
+    let powerV = 0;
+    let animationIdH, animationIdV;
+    let horizontalStopped = false;
+    let verticalStopped = false;
+
+    function drawBoard() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const rings = [150, 100, 50, 20];
+      const colors = ['#ccc', '#999', '#666', 'red'];
+
+      rings.forEach((radius, i) => {
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = colors[i];
+        ctx.fill();
+        ctx.closePath();
+      });
+    }
+
+    function animatePowerBar() {
+      const containerWidth = powerBarContainer.offsetWidth;
+      const barWidth = powerBar.offsetWidth;
+      powerH += directionH * 2;
+      if (powerH <= 0 || powerH + barWidth >= containerWidth) {
+        directionH *= -1;
+      }
+      powerBar.style.left = `${powerH}px`;
+      animationIdH = requestAnimationFrame(animatePowerBar);
+    }
+
+    function animateVerticalBar() {
+      const containerHeight = verticalBarContainer.offsetHeight;
+      const barHeight = verticalBar.offsetHeight;
+      powerV += directionV * 2;
+      if (powerV <= 0 || powerV + barHeight >= containerHeight) {
+        directionV *= -1;
+      }
+      verticalBar.style.top = `${powerV}px`;
+      animationIdV = requestAnimationFrame(animateVerticalBar);
+    }
+
+    function stopHorizontalBar() {
+      if (!horizontalStopped) {
+        cancelAnimationFrame(animationIdH);
+        horizontalStopped = true;
+        animateVerticalBar();
+      }
+    }
+
+    function stopVerticalBar() {
+      if (horizontalStopped && !verticalStopped) {
+        cancelAnimationFrame(animationIdV);
+        verticalStopped = true;
+        throwDart();
+      }
+    }
+
+    function throwDart() {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const containerWidth = powerBarContainer.offsetWidth;
+      const barCenterH = powerH + powerBar.offsetWidth / 2;
+      const deviationH = (barCenterH - containerWidth / 2) / (containerWidth / 2);
+      const containerHeight = verticalBarContainer.offsetHeight;
+      const barCenterV = powerV + verticalBar.offsetHeight / 2;
+      const deviationV = (barCenterV - containerHeight / 2) / (containerHeight / 2);
+      const maxOffset = 150;
+      const targetX = centerX + deviationH * maxOffset;
+      const targetY = centerY + deviationV * maxOffset;
+
+      finalizeDart(targetX, targetY);
+    }
+
+    function finalizeDart(x, y) {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      let points = 0;
+      if (distance < 20) points = 50;
+      else if (distance < 50) points = 25;
+      else if (distance < 100) points = 10;
+      else if (distance < 150) points = 5;
+
+      score += points;
+      scoreDisplay.textContent = `Score: ${score}`;
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x - 5, y);
+      ctx.lineTo(x + 5, y);
+      ctx.moveTo(x, y - 5);
+      ctx.lineTo(x, y + 5);
+      ctx.stroke();
+
+      setTimeout(resetGame, 500);
+    }
+
+    function resetGame() {
+      horizontalStopped = false;
+      verticalStopped = false;
+      powerH = 0;
+      powerV = 0;
+      powerBar.style.left = '0px';
+      verticalBar.style.top = '0px';
+      directionH = 1;
+      directionV = 1;
+      animatePowerBar();
+    }
+
+    drawBoard();
+    animatePowerBar();
+  </script>
+</body>
+</html>
